@@ -1,0 +1,87 @@
+---
+title: "Model"
+author: "Ronaldo Echeverria"
+date: "20/2/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prediction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+## Preparing Data
+
+```{r prepare, echo=FALSE}
+library("caret")
+library("tidyr")
+library("dplyr")
+
+training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+test <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+
+set.seed(123456)
+```
+
+Drop columns with na values in test data, this colums will drop in train data.
+
+```{r clean}
+#replace NA values
+colNames <- names(test)
+quitar <- c("X")
+
+for(i in 1:length(colNames)){
+  if(sum(is.na(test[colNames[i]]))>0){
+    quitar <-c(quitar, colNames[i])
+  }
+}
+
+training <- training[ , !(names(training) %in% quitar)]
+test <- test[ , !(names(test) %in% quitar)]
+```
+
+## Create model
+
+Generate model by 70% to training and 30% to test.
+
+```{r createM}
+entrenamiento <- createDataPartition(training$classe, p=0.7, list = FALSE)
+trainModel <- training[entrenamiento,]
+trainTest <- training[-entrenamiento,]
+
+modelo <- train(classe ~ ., data = trainModel, method = "rf", trControl = trainControl(method = "cv", 5), ntree = 10)
+
+modelo
+```
+
+## Prediction
+
+Get a predicion by test data.
+
+```{r testM}
+predTrain <- predict(modelo, trainTest)
+confusionMatrix(trainTest$classe, predTrain)
+
+exactitud <- postResample(predTrain, trainTest$classe)
+exactitud
+
+predTest <- predict(modelo, test)
+predTest
+```
